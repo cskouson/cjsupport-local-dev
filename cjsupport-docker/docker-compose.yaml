@@ -1,0 +1,32 @@
+services:
+  postgresdb:
+    image: cjsupport/postgres
+    build: ./images/postgres
+    container_name: cj_postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LOCAL_DB_ACCOUNT} -d cjdb"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+    restart: always
+    volumes:
+      - ../postgres/:/docker-entrypoint-initdb.d/
+    environment:
+      POSTGRES_DB: cjdb
+      POSTGRES_USER: ${LOCAL_DB_ACCOUNT}
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD}
+    ports:
+      - '8891:5432'
+  liquibase:
+    image: cjsupport/liquibase
+    build: ./images/liquibase
+    container_name: cj_liquibase
+    volumes:
+    - ../liquibase/:/liquibase/changelog
+    - ../../cjsupport-liquibase/liquibase/:/liquibase/cjsupport
+    command: --defaults-file=/liquibase/changelog/liquibase.properties ${COMM}
+    ports:
+      - '8892:8088'
+    depends_on:
+      postgresdb:
+        condition: service_healthy
